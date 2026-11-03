@@ -1,0 +1,286 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>SmartStudy | Create Account</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      background: #eef5ff;
+      color: #17345c;
+    }
+
+    .container {
+      max-width: 420px;
+      margin: 30px auto;
+      padding: 25px;
+      background: white;
+      border-radius: 18px;
+      box-shadow: 0 5px 20px #d2deef;
+    }
+
+    h1, h2, p {
+      text-align: center;
+    }
+
+    h1 {
+      color: #1769d2;
+    }
+
+    input, select, button {
+      width: 100%;
+      padding: 14px;
+      margin-top: 12px;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+
+    input, select {
+      border: 1px solid #ccd8e8;
+      background: white;
+    }
+
+    button {
+      border: none;
+      background: #1769d2;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+    }
+
+    a {
+      color: #1769d2;
+    }
+
+    #message {
+      font-size: 14px;
+      overflow-wrap: anywhere;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+
+    <h1>🧠 SmartStudy</h1>
+
+    <h2>Create Your Account</h2>
+
+    <p>Learn Better. Think Smarter. Go Further.</p>
+
+    <form id="registerForm">
+
+      <input
+        id="name"
+        type="text"
+        placeholder="Full name"
+        autocomplete="name"
+        required
+      >
+
+      <input
+        id="email"
+        type="email"
+        placeholder="Email address"
+        autocomplete="email"
+        required
+      >
+
+      <input
+        id="password"
+        type="password"
+        placeholder="Password (at least 8 characters)"
+        autocomplete="new-password"
+        minlength="8"
+        required
+      >
+
+      <select id="accountType" required>
+        <option value="">Choose account type</option>
+        <option value="student">Student</option>
+        <option value="teacher">Teacher</option>
+      </select>
+
+      <button id="registerButton" type="submit">
+        Create Account
+      </button>
+
+      <p id="message" role="status"></p>
+
+    </form>
+
+    <p>
+      <a href="index.html">Back to homepage</a>
+    </p>
+
+  </div>
+
+  <script type="module">
+
+    import { initializeApp }
+      from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+
+    import {
+      getAuth,
+      createUserWithEmailAndPassword,
+      updateProfile
+    } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+
+    import {
+      getFirestore,
+      doc,
+      setDoc,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+
+
+    // Replace these values with your Firebase Web App configuration.
+
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+
+    const app = initializeApp(firebaseConfig);
+
+    const auth = getAuth(app);
+
+    const db = getFirestore(app);
+
+
+    const form = document.getElementById("registerForm");
+
+    const message = document.getElementById("message");
+
+    const button = document.getElementById("registerButton");
+
+
+    form.addEventListener("submit", async (event) => {
+
+      event.preventDefault();
+
+      const name = document.getElementById("name").value.trim();
+
+      const email = document.getElementById("email").value.trim();
+
+      const password = document.getElementById("password").value;
+
+      const accountType = document.getElementById("accountType").value;
+
+
+      if (!name || !email || !password || !accountType) {
+
+        message.textContent = "Please complete all fields.";
+
+        return;
+
+      }
+
+
+      if (password.length < 8) {
+
+        message.textContent = "Password must be at least 8 characters.";
+
+        return;
+
+      }
+
+
+      button.disabled = true;
+
+      message.textContent = "Creating your account...";
+
+
+      try {
+
+        const result = await createUserWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
+
+
+        await updateProfile(result.user, {
+          displayName: name
+        });
+
+
+        await setDoc(
+          doc(db, "users", result.user.uid),
+          {
+            name: name,
+            email: email,
+            accountType: accountType,
+            country: "",
+            teacherStatus:
+              accountType === "teacher" ? "pending" : "not_applicable",
+            createdAt: serverTimestamp()
+          }
+        );
+
+
+        message.textContent =
+          "Account created successfully! Welcome to SmartStudy.";
+
+
+        form.reset();
+
+
+      } catch (error) {
+
+        console.error(error);
+
+        if (error.code === "auth/email-already-in-use") {
+
+          message.textContent =
+            "This email already has an account.";
+
+        } else if (error.code === "auth/invalid-email") {
+
+          message.textContent =
+            "Please enter a valid email address.";
+
+        } else if (error.code === "auth/weak-password") {
+
+          message.textContent =
+            "Please choose a stronger password.";
+
+        } else {
+
+          message.textContent =
+            "Account creation failed. Please check Firebase configuration and try again.";
+
+        }
+
+      } finally {
+
+        button.disabled = false;
+
+      }
+
+    });
+
+  </script>
+
+</body>
+</html>
